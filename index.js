@@ -1,95 +1,82 @@
 "use strict";
 
-const cube = {};
+// Lib
+const lib = require('./lib');
 
-/**
- * Generate the available points within the cube
- */
-for (let i = 1, j = 1, k = 1; k <= 4; ++i > 4 && (i = 1, ++j > 4 && (j = 1, k++))) {
-  cube[i.toString() + j.toString() + k.toString()] = true;
-}
+console.log(lib.moves.length)
 
-class Piece {
-  constructor(name, ...coordinates) {
-    this.name = name;
-    this.coordinates = coordinates.map(coordinate => {
-      return {
-        x: coordinate[0],
-        y: coordinate[1],
-        z: coordinate[2]
-      };
-    });
-  }
+const deadends = [];
 
-  getAvailableMoves() {
-    const moves = [];
+// (function attemptSolution() {
+//   // Bootstrap the cube
+//   const cube = bootstrapCube();
 
-    for (let position in cube) {
-      if (cube[position]) {
-        this.getRotationsForPosition(...position)
-      }
-    }
-  }
+//   // Setup some scoped variables
+//   let possibleMoves = [];
 
-  getRotationsForPosition(x, y, z) {
-    x = parseInt(x);
-    y = parseInt(y);
-    z = parseInt(z);
+//   while (calculatePossibleMoves()) {
+//     let move = retrieveRandomIndex(availableMoves);
 
-    const rotations = [];
+//     for (let co of move.coordinates) {
+//       cube[co.x.toString() + co.y.toString() + co.z.toString()] = false;
+//     }
 
-    for (let i = 0; i < 8; i++) {
-      rotations.push(this.coordinates.map(coordinate => {
-        return {
-          x: x + (i % 2 ? coordinate.x : -coordinate.x),
-          y: y + (i % 3 ? coordinate.y : -coordinate.y),
-          z: z + (i % 4 ? coordinate.z : -coordinate.z)
-        };
-      }));
-    }
+//     moves.push(move);
+//   }
 
-    for (let i = 0; i < 8; i++) {
-      rotations.push(this.coordinates.map(coordinate => {
-        return {
-          x: x + (i % 2 ? coordinate.y : -coordinate.y),
-          y: y + (i % 3 ? coordinate.z : -coordinate.z),
-          z: z + (i % 4 ? coordinate.x : -coordinate.x)
-        };
-      }));
-    }
+//   function bootstrapCube() {
 
-    for (let i = 0; i < 8; i++) {
-      rotations.push(this.coordinates.map(coordinate => {
-        return {
-          x: x + (i % 2 ? coordinate.z : -coordinate.z),
-          y: y + (i % 3 ? coordinate.x : -coordinate.x),
-          z: z + (i % 4 ? coordinate.y : -coordinate.y)
-        };
-      }));
-    }
+//   }
 
-    return rotations.filter(position => {
-      return position.every(co => {
-        return co.x <= 4 && co.x >= 1 && co.y <= 4 && co.y >= 1 && co.z <= 4 && co.z >= 1;
-      });
-    });
-  }
-}
+//   function calculatePossibleMoves() {
+//     // Clear the previously possible moves
+//     possibleMoves.length = 0;
 
-const pieces = [
-  { name: 'Red - Tall', mapping: [[0, 0, 0], [1, 0, 0], [0, 0, -1], [0, 1, 0], [0, 2, 0]] },
-  { name: 'Red - Star', mapping: [[0, 0, 0], [-1, 0, 0], [1, 0, 0], [0, 1, 0], [0, -1, 0]] },
-  { name: 'Red - Squiggly 1', mapping: [[0, 0, 0], [1, 0, 0], [1, 1, 0], [2, 1, 0], [0, 0, -1]] },
-  { name: 'Red - Squiggly 2', mapping: [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, -1], [2, 1, 0]] },
-  { name: 'Yellow - Short', mapping: [[0, 0, 0], [0, 1, 0], [1, 0, 0], [1, 0, -1]] },
-  { name: 'Yellow - Tall 1', mapping: [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 2, 0], [0, 0, -1]] },
-  { name: 'Yellow - Tall 2', mapping: [[0, 0, 0], [1, 0, 0], [2, 0, 0], [2, 1, 0], [0, 0, -1]] },
-  { name: 'Yellow - Diagonal', mapping: [[0, 0, 0], [1, 0, 0], [1, 1, 0], [2, 1, 0], [2, 2, 0]] },
-  { name: 'Yellow - T-Shaped', mapping: [[0, 0, 0], [1, 0, 0], [1, 1, 0], [2, 0, 0], [1, 0, -1]] },
-  { name: 'Blue - L-Shaped', mapping: [[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 2, 0], [-1, 1, 0]] },
-  { name: 'Blue - Squiggly', mapping: [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, -1], [2, 1, -1]] },
-  { name: 'Blue - T-Shaped 1', mapping: [[0, 0, 0], [1, 0, 0], [1, 1, 0], [2, 0, 0], [1, 1, -1]] },
-  { name: 'Blue - T-Shaped 2', mapping: [[0, 0, 0], [1, 0, 0], [1, 1, 0], [2, 0, 0], [0, 0, -1]] }
-].map(x => new Piece(x.name, ...x.mapping));
+//     for (let piece of pieces) {
+//       if (!piece.hasBeenPlaced) {
+//         let m = piece.getAvailableMoves();
 
-console.log(pieces[0].getRotationsForPosition(1, 1, 1));
+//         if (!m.length) {
+//           handleFailure();
+//           return false;
+//         } else {
+//           possibleMoves.push(...m);
+//         }
+//       }
+//     }
+
+//     return true;
+//   }
+
+//   function retrieveRandomIndex(arr) {
+//     return arr[Math.floor(Math.random() * arr.length)];
+//   }
+
+//   function generateMoveHistoryHash(...moves) {
+//     return moves.map(move => move.hash);
+//   }
+
+//   /**
+//    * Generate the available points within the cube
+//    */
+//   function bootstrapCube() {
+//     let cube = {};
+
+//     for (let i = 1, j = 1, k = 1; k <= 4; ++i > 4 && (i = 1, ++j > 4 && (j = 1, k++))) {
+//       cube[i.toString() + j.toString() + k.toString()] = true;
+//     }
+
+//     return cube;
+//   }
+
+//   function handleBlockage() {
+//     this.attempts = this.attempts || 1;
+//     conosle.log('%s attempts', this.attempts++);
+
+//     // Mark the point as impassable
+//     deadends.push(hashMoves);
+
+//     // Queue another solution attempt
+//     setTimeout(attemptSolution);
+//   }
+// })();
