@@ -3,55 +3,110 @@
 // Lib
 const lib = require('./lib');
 
-console.log(lib.moves.length);
+// Setup some scoped variables
+let move;
+let deadends = [];
+let previousMoves = [];
+let availableMoves = [];
 
-const deadends = [];
+// Generate the cube
+const cube = lib.methods.generateCube();
+const moves = lib.resetMoves();
+const pieces = lib.resetPieces();
 
 (function attemptSolution() {
-  // Generate the cube
-  const cube = lib.methods.generateCube();
+  while (prepareMoves()) {
+    move = lib.methods.retrieveRandomIndex(availableMoves);
 
-  // Setup some scoped variables
-  let possibleMoves = [];
+    move.reserveCoordinates(cube);
+    move.piece.markAsPlaced();
 
-  while (calculatePossibleMoves()) {
-    let move = retrieveRandomIndex(availableMoves);
-
-    for (let co of move.coordinates) {
-      cube[co.x.toString() + co.y.toString() + co.z.toString()] = false;
-    }
-
-    moves.push(move);
+    previousMoves[previousMoves.length] = move;
   }
 
-  function calculatePossibleMoves() {
-    // Clear the previously possible moves
-    possibleMoves.length = 0;
+  function prepareMoves() {
+    availableMoves.length = 0;
 
+    // Check each move to see whether or not it is still possible
+    for (let move of moves) {
+      if (move.isPossible()) {
+        move.updatePossibility(cube);
+      }
+    }
+
+    // Check each piece to see whether or not it is blocked
     for (let piece of pieces) {
-      if (!piece.hasBeenPlaced) {
-        let m = piece.getAvailableMoves();
+      if (piece.hasNotBeenPlaced()) {
+        let pieceMoves = piece
+          .getAvailableMoves(moves, cube)
+          .filter(move => {
+            return !deadends.includes(hashMoves([...previousMoves, move]));
+          });
 
-        if (!m.length) {
-          handleFailure();
+        // If the piece is unable to be placed, mark the cube as blocked
+        if (!pieceMoves.length) {
+          processBlockage();
           return false;
         } else {
-          possibleMoves.push(...m);
+          piece.totalMoves = pieceMoves.length;
+          availableMoves = [...availableMoves, ...pieceMoves];
         }
       }
     }
 
-    return true;
+    availableMoves = availableMoves.sort(move => move.piece.totalMoves).reverse().slice(0, 200);
+
+    return availableMoves.length;
   }
 
-  function handleBlockage() {
-    this.attempts = this.attempts || 1;
-    conosle.log('%s attempts', this.attempts++);
+  function processBlockage() {
+    let isComplete = pieces.every(piece => {
+      return piece.hasBeenPlaced();
+    });
 
-    // Mark the point as impassable
-    deadends.push(hashMoves);
+    // Check to see whether or not the cube is complete
+    if (isComplete) {
+      // Log the moves that were made
+      previousMoves.forEach(move => {
+        console.log(move.piece.name);
+      });
 
-    // Queue another solution attempt
-    setTimeout(attemptSolution);
+      console.log('\nDone!');
+    } else {
+      var hash = hashMoves(previousMoves);
+      deadends[deadends.length] = hash;
+
+      while (deadends.includes(hash)) {
+        reverseLastMove();
+        hash = hashMoves(previousMoves);
+      }
+
+      for (let move of moves) {
+        move.updatePossibility(cube);
+      }
+
+      console.log('Deadends: %s, Previous moves: %s', deadends.length, previousMoves.length)
+
+      // Queue another solution attempt
+      setTimeout(attemptSolution);
+    }
+  }
+
+  function reverseLastMove() {
+    // Clear and reset the last move
+    const move = previousMoves.pop();
+
+    move.unreserveCoordinates(cube);
+    move.piece.markAsNotPlaced();
+  }
+
+  function hashMoves(moves) {
+    return lib.methods.generateJSONHash(moves
+      .sort((a, b) => {
+        return a.piece.uid > b.piece.uid;
+      })
+      .map(move => {
+        return move.uid;
+      }));
   }
 })();
